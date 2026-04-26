@@ -76,6 +76,8 @@ defmodule Codenames.MixProject do
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": ["compile", "tailwind codenames", "esbuild codenames"],
       "assets.deploy": [
+        "tailwind.install --if-missing",
+        "esbuild.install --if-missing",
         "tailwind codenames --minify",
         "esbuild codenames --minify",
         "phx.digest"
