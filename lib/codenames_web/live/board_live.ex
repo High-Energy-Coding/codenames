@@ -52,6 +52,7 @@ defmodule CodenamesWeb.BoardLive do
     push_event(socket, "tension_check", %{
       red: Game.remaining(state, :red),
       blue: Game.remaining(state, :blue),
+      current_turn: to_string(state.current_turn),
       winner: state.winner && to_string(state.winner)
     })
   end

@@ -8,13 +8,21 @@ defmodule CodenamesWeb.SpymasterLive do
     code = String.upcase(code)
 
     if Games.exists?(code) do
-      if connected?(socket),
-        do: Phoenix.PubSub.subscribe(Codenames.PubSub, Game.topic(code))
+      state = Games.state(code)
 
-      {:ok,
-       socket
-       |> assign(code: code, page_title: "Spymaster · " <> code)
-       |> assign_game(Games.state(code))}
+      if state.winner do
+        # Game's already won — bounce straight to board so we don't show the
+        # answers from a finished game while people swap seats.
+        {:ok, push_navigate(socket, to: ~p"/board/#{code}")}
+      else
+        if connected?(socket),
+          do: Phoenix.PubSub.subscribe(Codenames.PubSub, Game.topic(code))
+
+        {:ok,
+         socket
+         |> assign(code: code, page_title: "Spymaster · " <> code)
+         |> assign_game(state)}
+      end
     else
       {:ok,
        socket
@@ -24,8 +32,21 @@ defmodule CodenamesWeb.SpymasterLive do
   end
 
   @impl true
-  def handle_info({:game_updated, state, _meta}, socket) do
-    {:noreply, assign_game(socket, state)}
+  def handle_info({:game_updated, state, meta}, socket) do
+    cond do
+      # Game just ended — flip the spymaster phone over to the board so the
+      # answers vanish before anyone sees the next round's colors.
+      state.winner ->
+        {:noreply, push_navigate(socket, to: ~p"/board/#{socket.assigns.code}")}
+
+      # Belt-and-suspenders: if a new round somehow starts while we're still
+      # on the spymaster screen, also bounce to board (don't render new state).
+      meta[:event] == :restart ->
+        {:noreply, push_navigate(socket, to: ~p"/board/#{socket.assigns.code}")}
+
+      true ->
+        {:noreply, assign_game(socket, state)}
+    end
   end
 
   defp assign_game(socket, game) do

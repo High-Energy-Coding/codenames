@@ -100,11 +100,12 @@ function stopHeartbeat() {
   }
 }
 
-// "Close game" trigger — both teams have 3 or fewer cards remaining AND
-// they're within 1 of each other. Generous on purpose so the heartbeat
-// kicks in during the genuinely-tense endgame stretch.
-function isCloseGame(red, blue) {
-  return red <= 3 && blue <= 3 && Math.abs(red - blue) <= 1
+// Heartbeat trigger: the team whose turn it is has 2 or fewer cards left.
+// Plays only on that team's turn — when the turn flips to a team with more
+// remaining, the heartbeat stops. Resumes when it flips back.
+function isOnTheBrink(red, blue, currentTurn) {
+  const remaining = currentTurn === "red" ? red : blue
+  return remaining <= 2
 }
 
 const audio = {
@@ -244,15 +245,15 @@ window.addEventListener("phx:turn_ended", (e) => {
 })
 
 window.addEventListener("phx:tension_check", (e) => {
-  const { red, blue, winner } = e.detail
+  const { red, blue, current_turn, winner } = e.detail
   if (winner) {
     stopHeartbeat()
     return
   }
-  // Once started, the heartbeat keeps going until winner/restart — we only
-  // ever flip it ON here, never off based on score un-tensing.
-  if (isCloseGame(red, blue)) {
+  if (isOnTheBrink(red, blue, current_turn)) {
     startHeartbeat()
+  } else {
+    stopHeartbeat()
   }
 })
 
