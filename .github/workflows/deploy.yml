@@ -1,0 +1,33 @@
+name: Deploy to Gigalixir
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Serialize deploys so two pushes don't race against the same git remote.
+concurrency:
+  group: gigalixir-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Push to Gigalixir
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Gigalixir's buildpack needs full git history to determine the
+          # source version — a shallow clone makes the push fail.
+          fetch-depth: 0
+
+      - name: Push to Gigalixir
+        env:
+          GIGALIXIR_EMAIL: ${{ secrets.GIGALIXIR_EMAIL }}
+          GIGALIXIR_API_KEY: ${{ secrets.GIGALIXIR_API_KEY }}
+        run: |
+          set -euo pipefail
+          # URL-encode the @ in the email so the basic-auth segment parses cleanly.
+          encoded_email="${GIGALIXIR_EMAIL//@/%40}"
+          remote_url="https://${encoded_email}:${GIGALIXIR_API_KEY}@git.gigalixir.com/codenames.git/"
+          git push "$remote_url" HEAD:refs/heads/main
