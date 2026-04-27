@@ -112,8 +112,8 @@ defmodule CodenamesWeb.SpymasterLive do
         <div
           :for={card <- @cards}
           class={[
-            "rounded-md flex items-center justify-center font-black uppercase text-center px-0.5 leading-none",
-            "text-[clamp(0.5rem,2.5vw,1rem)] tracking-tight",
+            "rounded-md flex items-center justify-center font-black uppercase text-center px-0.5 leading-none tracking-tight",
+            word_text_class(card.word),
             card_color(card.kind),
             card.revealed && "opacity-25"
           ]}
@@ -129,6 +129,15 @@ defmodule CodenamesWeb.SpymasterLive do
     game.assignments
     |> Enum.zip(game.revealed)
     |> Enum.count(fn {a, r} -> a == :neutral and not r end)
+  end
+
+  defp word_text_class(word) do
+    case String.length(word) do
+      n when n <= 6 -> "text-[clamp(0.5rem,2.5vw,1rem)]"
+      n when n <= 8 -> "text-[clamp(0.45rem,2.0vw,0.9rem)]"
+      n when n <= 10 -> "text-[clamp(0.4rem,1.6vw,0.75rem)]"
+      _ -> "text-[clamp(0.35rem,1.3vw,0.65rem)]"
+    end
   end
 
   defp card_color(:red), do: "bg-red-600 text-white"

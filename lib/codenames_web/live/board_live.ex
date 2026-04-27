@@ -161,13 +161,15 @@ defmodule CodenamesWeb.BoardLive do
             <div class={[
               "card-face card-front rounded-xl",
               "bg-amber-50 text-stone-800 shadow-md font-black uppercase",
-              "text-[clamp(0.625rem,3.2vw,5rem)] tracking-tight leading-none p-1"
+              "tracking-tight leading-none p-1",
+              word_text_class(card.word)
             ]}>
               <span class="text-balance">{card.word}</span>
             </div>
             <div class={[
               "card-face card-back rounded-xl shadow-inner font-black uppercase",
-              "text-[clamp(0.625rem,3.2vw,5rem)] tracking-tight leading-none p-1",
+              "tracking-tight leading-none p-1",
+              word_text_class(card.word),
               card_color(card.kind)
             ]}>
               <span class="text-balance">{card.word}</span>
@@ -216,6 +218,15 @@ defmodule CodenamesWeb.BoardLive do
       </div>
     </div>
     """
+  end
+
+  defp word_text_class(word) do
+    case String.length(word) do
+      n when n <= 6 -> "text-[clamp(0.625rem,3.2vw,5rem)]"
+      n when n <= 8 -> "text-[clamp(0.55rem,2.6vw,4rem)]"
+      n when n <= 10 -> "text-[clamp(0.45rem,2.0vw,3rem)]"
+      _ -> "text-[clamp(0.4rem,1.7vw,2.5rem)]"
+    end
   end
 
   defp card_color(:red), do: "bg-red-700 text-red-50"
