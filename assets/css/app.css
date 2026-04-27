@@ -156,3 +156,50 @@
   from { opacity: 0; transform: scale(0.7); }
   to   { opacity: 1; transform: scale(1); }
 }
+
+/* Assassin reveal — full-screen "you picked the assassin!" moment that
+   plays for ~3s before the winner overlay fades in over the top. */
+.assassin-reveal-overlay {
+  animation: assassin-pop 3s ease-out both;
+}
+@keyframes assassin-pop {
+  0%   { opacity: 0; transform: scale(0.6) rotate(-2deg); }
+  8%   { opacity: 1; transform: scale(1.12) rotate(-1deg); }
+  16%  { transform: scale(0.98) rotate(1deg); }
+  22%  { transform: scale(1.04) rotate(0deg); }
+  82%  { opacity: 1; transform: scale(1.04); }
+  100% { opacity: 0; transform: scale(1.1); }
+}
+
+.assassin-text-pulse {
+  animation: assassin-text-pulse 1.2s ease-in-out infinite;
+}
+@keyframes assassin-text-pulse {
+  0%, 100% { text-shadow: 0 0 20px rgba(220, 38, 38, 0.8), 0 0 40px rgba(220, 38, 38, 0.4); }
+  50%      { text-shadow: 0 0 35px rgba(220, 38, 38, 1),   0 0 75px rgba(220, 38, 38, 0.7); }
+}
+
+.assassin-shake {
+  animation: assassin-shake 0.6s ease-in-out 0.4s;
+}
+@keyframes assassin-shake {
+  0%, 100%                       { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90%        { transform: translateX(-7px); }
+  20%, 40%, 60%, 80%             { transform: translateX(7px); }
+}
+
+/* Holds the winner overlay invisible until the assassin reveal finishes,
+   then fades it in. */
+.winner-overlay-delayed {
+  opacity: 0;
+  visibility: hidden;
+  animation: winner-delayed-show 3.4s ease-out both;
+}
+@keyframes winner-delayed-show {
+  0%, 82%   { opacity: 0; visibility: hidden; }
+  85%       { visibility: visible; opacity: 0; }
+  100%      { opacity: 1; visibility: visible; }
+}
+.winner-overlay-delayed .winner-content {
+  animation: winner-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 2.95s both;
+}

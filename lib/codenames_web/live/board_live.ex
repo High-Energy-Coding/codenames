@@ -101,8 +101,13 @@ defmodule CodenamesWeb.BoardLive do
     ]}>
       <div class="flex items-center justify-between gap-3 shrink-0">
         <div class="flex items-center gap-3 sm:gap-5">
-          <div class="text-2xl sm:text-3xl lg:text-4xl font-black tracking-[0.3em] text-stone-700 dark:text-stone-300">
-            {@code}
+          <div class="leading-none">
+            <div class="text-[10px] sm:text-xs font-medium uppercase tracking-[0.25em] text-stone-400 dark:text-stone-500 mb-1">
+              room code
+            </div>
+            <div class="text-2xl sm:text-3xl lg:text-4xl font-black tracking-[0.3em] text-stone-700 dark:text-stone-300">
+              {@code}
+            </div>
           </div>
           <div
             :if={!@game.winner}
@@ -173,19 +178,37 @@ defmodule CodenamesWeb.BoardLive do
     </div>
 
     <div
+      :if={@game.winner && @game.winning_reason == :assassin}
+      class="assassin-reveal-overlay fixed inset-0 z-40 flex items-center justify-center bg-black/95 backdrop-blur-md p-6"
+    >
+      <div class="text-center space-y-6 sm:space-y-8">
+        <div class="assassin-shake assassin-text-pulse text-6xl sm:text-8xl lg:text-[11rem] leading-none font-black uppercase text-red-600 tracking-[0.15em]">
+          Assassin
+        </div>
+        <div class="text-3xl sm:text-5xl lg:text-7xl font-bold text-stone-100 tracking-wide">
+          {assassin_word(@game)}
+        </div>
+        <div class={[
+          "text-2xl sm:text-4xl lg:text-5xl font-black uppercase tracking-wider",
+          losing_team_class(@game.winner)
+        ]}>
+          {opposing_team(@game.winner)} picked it
+        </div>
+      </div>
+    </div>
+
+    <div
       :if={@game.winner}
       class={[
         "winner-overlay fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm p-6",
         @game.winner == :red && "bg-red-900/75",
-        @game.winner == :blue && "bg-blue-900/75"
+        @game.winner == :blue && "bg-blue-900/75",
+        @game.winning_reason == :assassin && "winner-overlay-delayed"
       ]}
     >
       <div class="winner-content text-center space-y-6">
         <div class="text-7xl sm:text-8xl lg:text-9xl font-black text-white drop-shadow-2xl uppercase tracking-tight">
           {to_string(@game.winner)} wins
-        </div>
-        <div :if={@game.winning_reason == :assassin} class="text-2xl sm:text-3xl text-white/90 font-medium">
-          the other team picked the assassin
         </div>
         <button phx-click="restart" class="btn btn-lg text-xl">
           New Round
@@ -202,4 +225,16 @@ defmodule CodenamesWeb.BoardLive do
 
   defp team_pill_class(:red), do: "bg-red-700 text-white"
   defp team_pill_class(:blue), do: "bg-blue-800 text-white"
+
+  defp opposing_team(:red), do: "blue"
+  defp opposing_team(:blue), do: "red"
+
+  defp losing_team_class(:red), do: "text-blue-400"
+  defp losing_team_class(:blue), do: "text-red-400"
+
+  defp assassin_word(game) do
+    game.words
+    |> Enum.zip(game.assignments)
+    |> Enum.find_value(fn {w, a} -> a == :assassin && w end)
+  end
 end

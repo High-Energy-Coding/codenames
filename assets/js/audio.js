@@ -236,7 +236,11 @@ window.addEventListener("phx:card_revealed", (e) => {
   }
 
   if (winner) {
-    setTimeout(() => audio.win(winner, { prominent: stolenWin }), 700)
+    // Assassin loss has its own ~3s reveal animation — delay the win
+    // celebration so it lands with the winner overlay instead of stomping
+    // on the assassin moment.
+    const winDelay = kind === "assassin" ? 2950 : 700
+    setTimeout(() => audio.win(winner, { prominent: stolenWin }), winDelay)
   }
 })
 

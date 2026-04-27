@@ -68,8 +68,13 @@ defmodule CodenamesWeb.SpymasterLive do
 
     <div class="h-dvh w-screen overflow-hidden bg-stone-100 dark:bg-stone-900 flex flex-col p-2 sm:p-3 gap-2">
       <div class="flex items-center justify-between gap-2 shrink-0">
-        <div class="text-base sm:text-xl font-black tracking-[0.2em] text-stone-700 dark:text-stone-300">
-          {@code}
+        <div class="leading-none">
+          <div class="text-[9px] sm:text-[10px] font-medium uppercase tracking-[0.25em] text-stone-400 dark:text-stone-500 mb-0.5">
+            room code
+          </div>
+          <div class="text-base sm:text-xl font-black tracking-[0.2em] text-stone-700 dark:text-stone-300">
+            {@code}
+          </div>
         </div>
 
         <div
