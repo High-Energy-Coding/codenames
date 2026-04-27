@@ -57,9 +57,6 @@ config :codenames, CodenamesWeb.Endpoint,
     ]
   ]
 
-# Enable dev routes for dashboard and mailbox
-config :codenames, dev_routes: true
-
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"
 
