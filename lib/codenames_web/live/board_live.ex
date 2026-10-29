@@ -14,6 +14,9 @@ defmodule CodenamesWeb.BoardLive do
       {:ok,
        socket
        |> assign(code: code, page_title: "Board · " <> code)
+       # Joining an already-finished game skips the ceremony and lands
+       # straight on the debrief board.
+       |> assign(ceremony: false, ceremony_ref: nil)
        |> assign_game(Games.state(code))}
     else
       {:ok,
@@ -39,14 +42,42 @@ defmodule CodenamesWeb.BoardLive do
     {:noreply, socket}
   end
 
+  def handle_event("skip_ceremony", _params, socket) do
+    {:noreply, assign(socket, ceremony: false, ceremony_ref: nil)}
+  end
+
   @impl true
   def handle_info({:game_updated, state, meta}, socket) do
     {:noreply,
      socket
+     |> assign_ceremony(meta)
      |> assign_game(state)
      |> push_meta_event(meta)
      |> push_tension(state)}
   end
+
+  def handle_info({:end_ceremony, ref}, %{assigns: %{ceremony_ref: ref}} = socket),
+    do: {:noreply, assign(socket, ceremony: false, ceremony_ref: nil)}
+
+  # Stale timer from a ceremony that was skipped or superseded by a restart.
+  def handle_info({:end_ceremony, _ref}, socket), do: {:noreply, socket}
+
+  # The winning reveal kicks off the ceremony: the full-screen winner overlay
+  # plays while the fanfare runs, then gives way to the calm debrief board.
+  # Timings track the win audio in assets/js/audio.js — the overlay fades out
+  # right after the final chord lands.
+  defp assign_ceremony(socket, %{event: :reveal, winner: winner} = meta)
+       when not is_nil(winner) do
+    ref = make_ref()
+    duration = if meta.winning_reason == :assassin, do: 11_500, else: 9_000
+    Process.send_after(self(), {:end_ceremony, ref}, duration)
+    assign(socket, ceremony: true, ceremony_ref: ref)
+  end
+
+  defp assign_ceremony(socket, %{event: :restart}),
+    do: assign(socket, ceremony: false, ceremony_ref: nil)
+
+  defp assign_ceremony(socket, _meta), do: socket
 
   defp push_tension(socket, state) do
     push_event(socket, "tension_check", %{
@@ -97,7 +128,8 @@ defmodule CodenamesWeb.BoardLive do
       "ring-[10px] ring-inset transition-[box-shadow] duration-300",
       !@game.winner && @game.current_turn == :red && "ring-red-700 cursor-red",
       !@game.winner && @game.current_turn == :blue && "ring-blue-800 cursor-blue",
-      @game.winner && "ring-stone-300"
+      @game.winner == :red && "ring-red-700/35",
+      @game.winner == :blue && "ring-blue-800/35"
     ]}>
       <div class="flex items-center justify-between gap-3 shrink-0">
         <div class="flex items-center gap-3 sm:gap-5">
@@ -118,6 +150,17 @@ defmodule CodenamesWeb.BoardLive do
           >
             {to_string(@game.current_turn)} team
           </div>
+          <div
+            :if={debrief?(@game, @ceremony)}
+            id="debrief-winner"
+            class={[
+              "debrief-pill flex items-center gap-2 sm:gap-3 text-xl sm:text-3xl lg:text-5xl font-black px-5 sm:px-7 lg:px-9 py-1.5 sm:py-2 lg:py-3 rounded-full uppercase tracking-wider shadow-lg",
+              team_pill_class(@game.winner)
+            ]}
+          >
+            <.icon name="hero-trophy" class="size-6 sm:size-8 lg:size-11" />
+            {to_string(@game.winner)} won
+          </div>
         </div>
 
         <div class="flex items-center gap-3 sm:gap-5 text-3xl sm:text-5xl lg:text-7xl font-black tabular-nums">
@@ -134,7 +177,16 @@ defmodule CodenamesWeb.BoardLive do
           >
             End Turn
           </button>
+          <button
+            :if={debrief?(@game, @ceremony)}
+            id="new-game"
+            phx-click="restart"
+            class="new-game-btn btn btn-neutral btn-sm sm:btn-md lg:btn-lg gap-2"
+          >
+            <.icon name="hero-arrow-path" class="new-game-icon size-4 sm:size-5 lg:size-6" /> New Game
+          </button>
           <.link
+            :if={!@game.winner}
             navigate={~p"/spymaster/#{@code}"}
             data-confirm="Are you the spymaster? Don't peek if not!"
             class="btn btn-secondary btn-sm sm:btn-md lg:btn-lg"
@@ -144,20 +196,32 @@ defmodule CodenamesWeb.BoardLive do
         </div>
       </div>
 
-      <div class="flex-1 min-h-0 grid grid-cols-5 grid-rows-5 gap-2 sm:gap-3 lg:gap-4">
+      <div
+        id="board"
+        class={[
+          "flex-1 min-h-0 grid grid-cols-5 grid-rows-5 gap-2 sm:gap-3 lg:gap-4",
+          debrief?(@game, @ceremony) && "is-debrief"
+        ]}
+      >
         <button
           :for={card <- @cards}
           id={"card-#{card.index}"}
           phx-click="reveal"
           phx-value-index={card.index}
           disabled={card.revealed || @game.winner != nil}
+          style={"--card-i: #{card.index}; --sway-i: #{rem(card.index * 7, 25)}"}
           class={[
             "card relative rounded-xl select-none",
-            !card.revealed && "hover:scale-[1.02] active:scale-95 transition-transform duration-150 cursor-pointer",
-            card.revealed && "cursor-default"
+            !card.revealed && !@game.winner &&
+              "hover:scale-[1.02] active:scale-95 transition-transform duration-150 cursor-pointer",
+            (card.revealed || @game.winner) && "cursor-default"
           ]}
         >
-          <div class={["card-inner absolute inset-0 rounded-xl", card.revealed && "is-flipped"]}>
+          <div class={[
+            "card-inner absolute inset-0 rounded-xl",
+            (card.revealed || debrief?(@game, @ceremony)) && "is-flipped",
+            !card.revealed && "is-unguessed"
+          ]}>
             <div class={[
               "card-face card-front rounded-xl",
               "bg-amber-50 text-stone-800 shadow-md font-black uppercase",
@@ -170,7 +234,8 @@ defmodule CodenamesWeb.BoardLive do
               "card-face card-back rounded-xl shadow-inner font-black uppercase",
               "tracking-tight leading-none p-1",
               word_text_class(card.word),
-              card_color(card.kind)
+              card_color(card.kind),
+              !card.revealed && "unguessed-mark"
             ]}>
               <span class="text-balance">{card.word}</span>
             </div>
@@ -180,7 +245,7 @@ defmodule CodenamesWeb.BoardLive do
     </div>
 
     <div
-      :if={@game.winner && @game.winning_reason == :assassin}
+      :if={@ceremony && @game.winning_reason == :assassin}
       class="assassin-reveal-overlay fixed inset-0 z-40 flex items-center justify-center bg-black/95 backdrop-blur-md p-6"
     >
       <div class="text-center space-y-6 sm:space-y-8">
@@ -200,9 +265,12 @@ defmodule CodenamesWeb.BoardLive do
     </div>
 
     <div
-      :if={@game.winner}
+      :if={@ceremony && @game.winner}
+      id="winner-overlay"
+      phx-click="skip_ceremony"
+      phx-remove={JS.hide(transition: {"winner-overlay-exit", "", ""}, time: 900)}
       class={[
-        "winner-overlay fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm p-6",
+        "winner-overlay fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm p-6 cursor-pointer",
         @game.winner == :red && "bg-red-900/75",
         @game.winner == :blue && "bg-blue-900/75",
         @game.winning_reason == :assassin && "winner-overlay-delayed"
@@ -212,13 +280,17 @@ defmodule CodenamesWeb.BoardLive do
         <div class="text-7xl sm:text-8xl lg:text-9xl font-black text-white drop-shadow-2xl uppercase tracking-tight">
           {to_string(@game.winner)} wins
         </div>
-        <button phx-click="restart" class="btn btn-lg text-xl">
-          New Round
-        </button>
+        <div class="winner-hint text-sm sm:text-base font-medium uppercase tracking-[0.3em] text-white/60">
+          tap to review the board
+        </div>
       </div>
     </div>
     """
   end
+
+  # The resting state after a game: every card face-up for the post-game
+  # "who meant what" conversation, until someone starts a new game.
+  defp debrief?(game, ceremony), do: game.winner != nil and not ceremony
 
   defp word_text_class(word) do
     case String.length(word) do
