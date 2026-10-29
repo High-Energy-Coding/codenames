@@ -203,3 +203,75 @@
 .winner-overlay-delayed .winner-content {
   animation: winner-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 2.95s both;
 }
+
+/* Ceremony exit — the winner overlay drifts away once the fanfare's final
+   chord lands (or when someone taps it). Keyframes spell out the start
+   state so this also works over .winner-overlay-delayed's hidden base. */
+.winner-overlay.winner-overlay-exit {
+  animation: winner-fade-out 0.9s ease-in both;
+}
+@keyframes winner-fade-out {
+  from { opacity: 1; visibility: visible; }
+  to   { opacity: 0; visibility: visible; }
+}
+.winner-hint {
+  animation: winner-fade-in 1s ease-out 2.5s both;
+}
+.winner-overlay-delayed .winner-hint {
+  animation-delay: 5s;
+}
+
+/* ---- Debrief — the calm resting board after a game ---- */
+
+/* Every card left on the table flips over in a gentle wave. */
+.is-debrief .card-inner.is-unguessed {
+  transition-duration: 900ms;
+  transition-delay: calc(var(--card-i) * 45ms);
+}
+
+/* Cards nobody guessed get a soft dashed outline so the table still shows
+   "we never got to that one" at a glance. */
+.unguessed-mark {
+  outline: 2px dashed color-mix(in srgb, currentColor 45%, transparent);
+  outline-offset: -6px;
+}
+
+.debrief-pill {
+  animation: debrief-settle 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.new-game-btn {
+  animation: debrief-settle 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.6s both;
+}
+.new-game-icon {
+  transition: transform 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.new-game-btn:hover .new-game-icon {
+  transform: rotate(-180deg);
+}
+@keyframes debrief-settle {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Slow, out-of-sync left/right sway — the table exhales after an intense
+     game. Each card joins a beat after the last, once the flip wave ends. */
+  .is-debrief .card {
+    animation: debrief-sway 9s ease-in-out infinite;
+    animation-delay: calc(1.8s + var(--sway-i) * 0.36s);
+  }
+  .debrief-pill {
+    animation:
+      debrief-settle 1.2s cubic-bezier(0.22, 1, 0.36, 1) both,
+      debrief-breathe 6s ease-in-out 1.2s infinite;
+  }
+}
+@keyframes debrief-sway {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  25%      { transform: rotate(0.7deg) translateY(-1.5px); }
+  75%      { transform: rotate(-0.7deg) translateY(1px); }
+}
+@keyframes debrief-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.025); }
+}
