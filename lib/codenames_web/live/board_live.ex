@@ -151,7 +151,7 @@ defmodule CodenamesWeb.BoardLive do
             {to_string(@game.current_turn)} team
           </div>
           <div
-            :if={@game.winner}
+            :if={debrief?(@game, @ceremony)}
             id="debrief-winner"
             class={[
               "debrief-pill flex items-center gap-2 sm:gap-3 text-xl sm:text-3xl lg:text-5xl font-black px-5 sm:px-7 lg:px-9 py-1.5 sm:py-2 lg:py-3 rounded-full uppercase tracking-wider shadow-lg",
@@ -178,7 +178,7 @@ defmodule CodenamesWeb.BoardLive do
             End Turn
           </button>
           <button
-            :if={@game.winner}
+            :if={debrief?(@game, @ceremony)}
             id="new-game"
             phx-click="restart"
             class="new-game-btn btn btn-neutral btn-sm sm:btn-md lg:btn-lg gap-2"
